@@ -4,36 +4,36 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.Environment;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.getbsinfo.BsInfo.BsInfo;
+import com.example.getbsinfo.Utils.FileUtils;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GSMCellLocationActivity";
-    private String bsInfo;
+    private Handler handler;
+    private Runnable runnable;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Button bt_ceaseSave = (Button)findViewById(R.id.bt_ceasesave);
         Button bt_getInfo = (Button) findViewById(R.id.bt_getinfo);
-        Button bt_ceaseInfo = (Button) findViewById(R.id.bt_ceaseinfo);
+        Button bt_deleteFile = (Button) findViewById(R.id.bt_deletefile);
         TextView tv_BsInfo = (TextView) findViewById(R.id.tv_bsinfo);
+
         final TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         bt_getInfo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -43,49 +43,59 @@ public class MainActivity extends AppCompatActivity {
                 if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     permissionList.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
                 }
-
                 if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     permissionList.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-                } else {
-                    bsInfo = BsInfo.getBSInfo(mTelephonyManager);
                 }
-                Log.i(TAG, "onCreate: " + bsInfo);
+                if (!permissionList.isEmpty()) {
+                    String[] permissions = permissionList.toArray(new String[permissionList.size()]);
 
-                saveBsInfo(bsInfo);
-
+                } else {
+                    startAlarmtask();
+//                    bsInfo = BsInfo.getBSInfo(mTelephonyManager);
+                }
+            }
+        });
+        bt_deleteFile.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean isDeleteSuccess = FileUtils.deleteInfo(getApplicationContext(), "bsInfo.txt");
+                if (isDeleteSuccess) {
+                    Toast.makeText(getApplicationContext(), "删除成功", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(getApplicationContext(), "删除失败或不存在此文件", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+        bt_ceaseSave.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                handler.removeCallbacks(runnable);
+                Toast.makeText(getApplicationContext(),"停止写入",Toast.LENGTH_SHORT).show();
             }
         });
 
 
     }
 
-    /**
-     * 把Bs信息写入文件
-     *
-     * @param bsInfo 在手机内部存储的bsInfo.txt
-     */
-    private void saveBsInfo(String bsInfo) {
-
-        File file = new File(Environment.getExternalStorageDirectory(), "bsInfo.txt");
-        Log.i(TAG, "saveBsInfo: "+Environment.getExternalStorageState()+"路径"+Environment.getExternalStorageDirectory().toString()+"\t"+file.toString());
-        BufferedWriter bw = null;
-        try {
-            bw = new BufferedWriter(new FileWriter(file, true));
-
-            bw.write(bsInfo);
-            bw.flush();
-        }catch (Exception e){
-            e.printStackTrace();
-            Toast.makeText(this,"写入文件失败",Toast.LENGTH_SHORT);
-        }finally {
-            if (bw!=null){
-                try {
-                    bw.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
+    private void startAlarmtask() {
+        final TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        handler = new Handler();
+        runnable = new Runnable(){
+            @Override
+            public void run() {
+                String bsInfo = BsInfo.getBSInfo(mTelephonyManager);
+                boolean isSaveSuccess = FileUtils.saveInfo(getApplicationContext(), bsInfo, "bsInfo.txt");
+                if (isSaveSuccess){
+                    Toast.makeText(getApplicationContext(),"存入文件成功",Toast.LENGTH_SHORT).show();
+                }else{
+                    Toast.makeText(getApplicationContext(),"存入文件失败",Toast.LENGTH_SHORT).show();
                 }
+                handler.postDelayed(this,5000);
+
             }
-        }
+
+        };
+        handler.postDelayed(runnable,1000);
 
     }
 
@@ -103,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
                     }
-                    bsInfo = BsInfo.getBSInfo(mTelephonyManager);
+                    startAlarmtask();
                 } else {
                     Toast.makeText(this, "未知错误", Toast.LENGTH_LONG).show();
                     finish();
@@ -112,24 +122,6 @@ public class MainActivity extends AppCompatActivity {
             default:
         }
     }
-//    public void save(String bsInfo){
-//        FileOutputStream out=null;
-//        BufferedWriter writer=null;
-//        try {
-//            out = openFileOutput("BsInfo.txt", Context.MODE_PRIVATE);
-//            writer=new BufferedWriter((new OutputStreamWriter(out)));
-//            writer.write(bsInfo);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            Toast.makeText(getApplicationContext(),"写入文件失败",Toast.LENGTH_LONG);
-//        }finally {
-//            if (writer!=null){
-//                try {
-//                    writer.close();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }
-//    }
+
+
 }
