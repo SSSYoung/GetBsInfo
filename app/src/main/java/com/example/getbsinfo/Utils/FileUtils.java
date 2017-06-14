@@ -14,6 +14,8 @@ import java.io.IOException;
  */
 
 public class FileUtils {
+
+
     /**
      *
      * @param context
@@ -21,7 +23,8 @@ public class FileUtils {
      * @param fileName
      */
     public static boolean saveInfo(Context context,String bsInfo, String fileName){
-        File file = new File(Environment.getExternalStorageDirectory(), fileName);
+
+        File file = new File(Environment.getExternalStorageDirectory().toString()+"/Bs/", fileName);
         //Log.i(TAG, "saveBsInfo: "+Environment.getExternalStorageState()+"路径"+Environment.getExternalStorageDirectory().toString()+"\t"+file.toString());
         BufferedWriter bw = null;
         boolean isSaveSuccess=false;

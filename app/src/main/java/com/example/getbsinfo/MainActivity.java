@@ -20,6 +20,7 @@ import com.example.getbsinfo.Utils.FileUtils;
 import com.example.getbsinfo.Utils.WeatherUtils;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GSMCellLocationActivity";
@@ -103,8 +104,9 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void run() {
+                String fileName=String.valueOf(Calendar.getInstance().get(Calendar.DAY_OF_MONTH))+"日"+"天气信息"+".txt";
                 String weatherInfo = WeatherUtils.queryWeather("pixian");
-                boolean isSaveSuccess = FileUtils.saveInfo(getApplicationContext(), weatherInfo, "WeatherInfo.txt");
+                boolean isSaveSuccess = FileUtils.saveInfo(getApplicationContext(), weatherInfo, fileName);
                 if (isSaveSuccess){
                     Toast.makeText(getApplicationContext(),"存入天气文件成功",Toast.LENGTH_SHORT).show();
                     Log.i(TAG_We, "天气信息:"+weatherInfo);
@@ -113,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.i(TAG_We, "天气信息获取失败");
                 }
                 //天气信息:每15分钟写入一次
-                handler.postDelayed(this,900000);
+                handler.postDelayed(this,5000);
             }
         };
         handler.postDelayed(runnableWeather,3000);
@@ -126,12 +128,16 @@ public class MainActivity extends AppCompatActivity {
     private void startBsAlarmtask() {
         final TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         handler = new Handler();
+
         runnableBs = new Runnable(){
+
             @Override
             public void run() {
 
+                String fileName= String.valueOf(Calendar.getInstance().get(Calendar.DAY_OF_MONTH))+"日"+"基站信息"+".txt";
                 String bsInfo = BsInfo.getBSInfo(mTelephonyManager);
-                boolean isSaveSuccess = FileUtils.saveInfo(getApplicationContext(), bsInfo, "bsInfo.txt");
+//                boolean isSaveSuccess = FileUtils.saveInfo(getApplicationContext(), bsInfo, "bsInfo.txt");
+                boolean isSaveSuccess = FileUtils.saveInfo(getApplicationContext(), bsInfo, fileName);
                 if (isSaveSuccess){
                     Toast.makeText(getApplicationContext(),"存入基站信息文件成功",Toast.LENGTH_SHORT).show();
                     Log.i(TAG_Bs, "基站信息:"+bsInfo);
@@ -139,8 +145,8 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(),"存入基站信息文件失败",Toast.LENGTH_SHORT).show();
                     Log.i(TAG_Bs, "基站信息:获取失败");
                 }
-                //每20秒写入一次
-                handler.postDelayed(this,20000);
+                //每30秒写入一次
+                handler.postDelayed(this,5000);
 
             }
 
