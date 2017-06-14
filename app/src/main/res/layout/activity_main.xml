@@ -9,20 +9,24 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/bt_getinfo"
-        android:text="获取基站信息被写入文件"/>
+        android:id="@+id/bt_getBsinfo"
+        android:text="写入基站信息"/>
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/bt_weatherInfo"
+        android:text="写入天气信息"/>
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/bt_deletefile"
-        android:text="删除文件"
-
-        />
+        android:text="删除文件" />
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/bt_ceasesave"
         android:text="停止写入"/>
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="match_parent"

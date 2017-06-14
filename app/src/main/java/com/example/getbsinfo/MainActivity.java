@@ -9,6 +9,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -16,13 +17,17 @@ import android.widget.Toast;
 
 import com.example.getbsinfo.BsInfo.BsInfo;
 import com.example.getbsinfo.Utils.FileUtils;
+import com.example.getbsinfo.Utils.WeatherUtils;
 
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GSMCellLocationActivity";
-    private Handler handler;
-    private Runnable runnable;
+    private static final String TAG_Bs="基站信息";
+    private static final String TAG_We="天气";
+    private Handler handler=new Handler();
+    private Runnable runnableBs;
+    private Runnable runnableWeather;
 
 
     @Override
@@ -30,12 +35,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Button bt_ceaseSave = (Button)findViewById(R.id.bt_ceasesave);
-        Button bt_getInfo = (Button) findViewById(R.id.bt_getinfo);
+        final Button bt_getBsInfo = (Button) findViewById(R.id.bt_getBsinfo);
         Button bt_deleteFile = (Button) findViewById(R.id.bt_deletefile);
-        TextView tv_BsInfo = (TextView) findViewById(R.id.tv_bsinfo);
+        final Button bt_weatherInfo= (Button) findViewById(R.id.bt_weatherInfo);
+        final TextView tv_BsInfo = (TextView) findViewById(R.id.tv_bsinfo);
+
 
         final TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        bt_getInfo.setOnClickListener(new View.OnClickListener() {
+        bt_getBsInfo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 //一次性申请多个权限,吧需要申请的权限放进集合，再一次性申请
@@ -50,16 +57,18 @@ public class MainActivity extends AppCompatActivity {
                     String[] permissions = permissionList.toArray(new String[permissionList.size()]);
 
                 } else {
-                    startAlarmtask();
-//                    bsInfo = BsInfo.getBSInfo(mTelephonyManager);
+                    startBsAlarmtask();
+                    bt_getBsInfo.setVisibility(View.INVISIBLE);
+
                 }
             }
         });
         bt_deleteFile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                boolean isDeleteSuccess = FileUtils.deleteInfo(getApplicationContext(), "bsInfo.txt");
-                if (isDeleteSuccess) {
+                boolean isDeleteSuccessBs = FileUtils.deleteInfo(getApplicationContext(), "bsInfo.txt");
+                boolean isDeleteSuccessWe = FileUtils.deleteInfo(getApplicationContext(), "WeatherInfo.txt");
+                if (isDeleteSuccessBs&&isDeleteSuccessWe) {
                     Toast.makeText(getApplicationContext(), "删除成功", Toast.LENGTH_LONG).show();
                 } else {
                     Toast.makeText(getApplicationContext(), "删除失败或不存在此文件", Toast.LENGTH_LONG).show();
@@ -69,33 +78,74 @@ public class MainActivity extends AppCompatActivity {
         bt_ceaseSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handler.removeCallbacks(runnable);
+                //停止handler往消息队列发数据
+                handler.removeCallbacks(runnableBs);
+                handler.removeCallbacks(runnableWeather);
                 Toast.makeText(getApplicationContext(),"停止写入",Toast.LENGTH_SHORT).show();
+            }
+        });
+        bt_weatherInfo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startWeatherAlarmtask();
+                bt_weatherInfo.setVisibility(View.INVISIBLE);
+
             }
         });
 
 
     }
 
-    private void startAlarmtask() {
-        final TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        handler = new Handler();
-        runnable = new Runnable(){
+    private void startWeatherAlarmtask() {
+
+        //天气信息:每15分钟写入一次
+        runnableWeather = new Runnable() {
+
             @Override
             public void run() {
+                String weatherInfo = WeatherUtils.queryWeather("pixian");
+                boolean isSaveSuccess = FileUtils.saveInfo(getApplicationContext(), weatherInfo, "WeatherInfo.txt");
+                if (isSaveSuccess){
+                    Toast.makeText(getApplicationContext(),"存入天气文件成功",Toast.LENGTH_SHORT).show();
+                    Log.i(TAG_We, "天气信息:"+weatherInfo);
+                }else{
+                    Toast.makeText(getApplicationContext(),"存入天气文件失败",Toast.LENGTH_SHORT).show();
+                    Log.i(TAG_We, "天气信息获取失败");
+                }
+                //天气信息:每15分钟写入一次
+                handler.postDelayed(this,900000);
+            }
+        };
+        handler.postDelayed(runnableWeather,3000);
+
+    }
+
+    /**
+     * 每隔20s将基站数据写入bsInfo.txt文件中
+     */
+    private void startBsAlarmtask() {
+        final TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        handler = new Handler();
+        runnableBs = new Runnable(){
+            @Override
+            public void run() {
+
                 String bsInfo = BsInfo.getBSInfo(mTelephonyManager);
                 boolean isSaveSuccess = FileUtils.saveInfo(getApplicationContext(), bsInfo, "bsInfo.txt");
                 if (isSaveSuccess){
-                    Toast.makeText(getApplicationContext(),"存入文件成功",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(),"存入基站信息文件成功",Toast.LENGTH_SHORT).show();
+                    Log.i(TAG_Bs, "基站信息:"+bsInfo);
                 }else{
-                    Toast.makeText(getApplicationContext(),"存入文件失败",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(),"存入基站信息文件失败",Toast.LENGTH_SHORT).show();
+                    Log.i(TAG_Bs, "基站信息:获取失败");
                 }
-                handler.postDelayed(this,5000);
+                //每20秒写入一次
+                handler.postDelayed(this,20000);
 
             }
 
         };
-        handler.postDelayed(runnable,1000);
+        handler.postDelayed(runnableBs,1000);
 
     }
 
@@ -113,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
                     }
-                    startAlarmtask();
+                    startBsAlarmtask();
                 } else {
                     Toast.makeText(this, "未知错误", Toast.LENGTH_LONG).show();
                     finish();
