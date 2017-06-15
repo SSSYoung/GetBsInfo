@@ -32,6 +32,7 @@ public class BsInfo {
 
                 switch (info.getClass().getName()) {
 
+
                     case "android.telephony.CellInfoCdma":
                         /**
                          * cdma基站的情况
